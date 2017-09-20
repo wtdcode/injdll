@@ -13,6 +13,7 @@
 #include <tchar.h>
 #include <stdio.h>
 #include <tlhelp32.h>
+#include<locale.h>
 
 #define INJECT_PERMISSIONS (PROCESS_CREATE_THREAD|PROCESS_QUERY_INFORMATION|PROCESS_VM_OPERATION|PROCESS_VM_WRITE|PROCESS_VM_READ)
 #define MakePtr( cast, ptr, addValue ) (cast)( (DWORD_PTR)(ptr) + (DWORD_PTR)(addValue))
@@ -162,7 +163,7 @@ int load(int pid, TCHAR *path)
 	DWORD  result = 0;
 	size_t len;
 
-	printf("Loading: %ls\n", path);
+	_tprintf(L"Loading: %ls\n", path);
 	
 	hProcess = OpenProcess(INJECT_PERMISSIONS, FALSE, pid);
 
@@ -224,11 +225,11 @@ int unload(int pid, TCHAR *szPath)
 	// get the module base
 	if((addr = ModuleBase(pid, szPath)) == 0)
 	{
-		printf("Error locating module %ls\n", szPath);
+		_tprintf(L"Error locating module %ls\n", szPath);
 		return 0;
 	}
 
-	printf("Freeing: [%x] %ls\n", addr, szPath);
+	_tprintf(L"Freeing: [%x] %ls\n", addr, szPath);
 
 	hThread = CreateRemoteThread(hProcess, 0, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, (LPVOID)addr, 0, 0);
 
@@ -268,13 +269,13 @@ DWORD_PTR functionRVA(TCHAR *path, char *func)
 
 	if((hModule = LoadLibrary(path)) == 0)
 	{
-		printf("Failed to LoadLibrary(%ls) [%x]\n", path, GetLastError());
+		_tprintf(L"Failed to LoadLibrary(%ls) [%x]\n", path, GetLastError());
 		return 0;
 	}
 
 	if((proc = GetProcAddress(hModule, func)) == 0)
 	{
-		printf("Failed to GetProcAddress(%s) [%x]\n", func, GetLastError());
+		_tprintf(L"Failed to GetProcAddress(%X) [%x]\n", (DWORD)func, GetLastError());
 		return 0;
 	}
 
@@ -296,7 +297,7 @@ int call(int pid, TCHAR *path, char *func, TCHAR *param)
 	PVOID  remote;
 	size_t len;
 
-	printf("Calling: %ls\n", func);
+	printf("Calling: %X\n", (DWORD)func);
 
 	hProcess = OpenProcess(INJECT_PERMISSIONS, FALSE, pid);
 
@@ -309,7 +310,7 @@ int call(int pid, TCHAR *path, char *func, TCHAR *param)
 	// get the module base
 	if((base = ModuleBase(pid, path)) == 0)
 	{
-		printf("Error locating module %ls\n", path);
+		_tprintf(L"Error locating module %ls\n", path);
 		return 0;
 	}
 
@@ -358,6 +359,7 @@ void usage()
 
 int _tmain(int argc, TCHAR* argv[])
 {
+	
 	TCHAR szPath[MAX_PATH];
 	const TCHAR *proc;
 	const TCHAR *cmd;
@@ -369,6 +371,8 @@ int _tmain(int argc, TCHAR* argv[])
 		usage();
 		return 1;
 	}
+
+	setlocale(LC_ALL, "");
 
 	if(!EnableDebugPrivilege())
 	{
